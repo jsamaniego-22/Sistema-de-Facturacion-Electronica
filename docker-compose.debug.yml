@@ -1,0 +1,46 @@
+version: '3.8'
+
+services:
+  # Servicio de Base de Datos (PostgreSQL)
+  db:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: admuser
+      POSTGRES_PASSWORD: FactAdmin22!
+      POSTGRES_DB: factsystem
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  # Servicio de Backend (Django)
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    environment:
+      - DATABASE_URL=postgres://admuser:FactAdmin22!@db:5432/factsystem
+      - DEBUG=1
+    volumes:
+      - ./backend:/app
+    ports:
+      - "8000:8000"
+      - "5678:5678"  # Puerto para debugpy (para depuración en Python)
+    depends_on:
+      - db
+    command: ["sh", "-c", "pip install debugpy && python -m debugpy --wait-for-client --listen 0.0.0.0:5678 manage.py runserver 0.0.0.0:8000 --nothreading --noreload"]
+
+  # Servicio de Frontend (React)
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    volumes:
+      - ./frontend:/app
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data:

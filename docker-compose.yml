@@ -1,0 +1,55 @@
+version: '3.8'
+
+services:
+  # Servicio de Base de Datos (PostgreSQL)
+  db:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: admuser
+      POSTGRES_PASSWORD: FactAdmin22!
+      POSTGRES_DB: factsystem
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  # Servicio de Backend (Django)
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    environment:
+      - DATABASE_URL=postgres://admuser:FactAdmin22!@db:5432/factsystem
+      - DEBUG=1
+    volumes:
+      - ./backend:/app
+    ports:
+      - "8000:8000"
+    depends_on:
+      - db
+
+  # Servicio de Frontend (React)
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    volumes:
+      - ./frontend:/app
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+
+  # Servicio de pgAdmin (Interfaz para PostgreSQL)
+  pgadmin:
+    image: dpage/pgadmin4
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@jasm-darktech.net  # Configura el email de login de pgAdmin
+      PGADMIN_DEFAULT_PASSWORD: admin           # Configura la contraseña de pgAdmin
+    ports:
+      - "5050:80"
+    depends_on:
+      - db
+
+volumes:
+  postgres_data:
