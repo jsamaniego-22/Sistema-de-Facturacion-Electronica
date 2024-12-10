@@ -1,8 +1,9 @@
-from django.db import models 
+from django.db import models
 
 # Modelo de Factura (Datos Generales)
 class Factura(models.Model):
     numero_factura = models.CharField(max_length=20, primary_key=True)  # Clave primaria
+    ruc_emisor = models.CharField(max_length=20)  # Relación con el emisor por RUC
     ruc_receptor = models.CharField(max_length=20)  # Relación con el receptor por RUC
     fecha_factura = models.DateField()  # Fecha de la factura
 
@@ -28,10 +29,8 @@ class Factura(models.Model):
 
 # Modelo de Emisor
 class Emisor(models.Model):
-    factura = models.OneToOneField(Factura, on_delete=models.CASCADE, related_name="emisor")
-
     dTipoRuc = models.CharField(max_length=10)  # Tipo de RUC
-    dRuc = models.CharField(max_length=20)  # RUC del emisor
+    dRuc = models.CharField(max_length=20, unique=True)  # RUC del emisor
     dDV = models.CharField(max_length=5)  # Dígito verificador del emisor
     dNombEm = models.CharField(max_length=100)  # Nombre del emisor
     dSucEm = models.CharField(max_length=10)  # Código de sucursal del emisor
@@ -42,19 +41,19 @@ class Emisor(models.Model):
     dDistr = models.CharField(max_length=50)  # Distrito
     dProv = models.CharField(max_length=50)  # Provincia
     dTfnEm = models.CharField(max_length=15)  # Teléfono del emisor
+    firma_digital = models.OneToOneField('FirmaDigital', on_delete=models.SET_NULL, null=True, blank=True)
 
     def __str__(self):
         return f"Emisor {self.dNombEm} - {self.dRuc}"
 
 # Modelo de Receptor
 class Receptor(models.Model):
-    factura = models.OneToOneField(Factura, on_delete=models.CASCADE, related_name="receptor")
-
     iTipoRec = models.CharField(max_length=10)  # Tipo de receptor
     dTipoRuc = models.CharField(max_length=10)  # Tipo de RUC del receptor
-    dRuc = models.CharField(max_length=20)  # RUC del receptor
+    dRuc = models.CharField(max_length=20, unique=True)  # RUC del receptor
     dNombRec = models.CharField(max_length=100)  # Nombre del receptor
     cPaisRec = models.CharField(max_length=3)  # Código de país del receptor
+    firma_digital = models.OneToOneField('FirmaDigital', on_delete=models.SET_NULL, null=True, blank=True)
 
     def __str__(self):
         return f"Receptor {self.dNombRec} - {self.dRuc}"
@@ -105,26 +104,19 @@ class PedidoComercial(models.Model):
 
     dNroPed = models.CharField(max_length=20)  # Número de pedido
     dCodSisEm = models.CharField(max_length=20)  # Código del sistema del emisor
-    dInfEmPedGl = models.TextField(blank=True, null=True)  # Información adicional del pedido
+    dInfEmPedGl = models.TextField(blank=True, null=True)  # Información global del pedido
 
     def __str__(self):
-        return f"Pedido Comercial {self.dNroPed}"
+        return f"Pedido Comercial {self.dNroPed} - Factura {self.factura.numero_factura}"
 
 # Modelo de Firma Digital
 class FirmaDigital(models.Model):
-    factura = models.OneToOneField(Factura, on_delete=models.CASCADE, related_name="firma_digital")
-
-    CanonicalizationMethod = models.CharField(max_length=100)
-    SignatureMethod = models.CharField(max_length=100)
-    Transforms = models.CharField(max_length=100)
-    DigestMethod = models.CharField(max_length=100)
-    DigestValue = models.CharField(max_length=255)
-    SignatureValue = models.TextField()
-    X509SubjectName = models.TextField()
-    X509Certificate = models.TextField()
+    dCertificado = models.TextField()  # Certificado digital
+    dValidez = models.DateField()  # Fecha de validez del certificado
+    dEmitidoPor = models.CharField(max_length=100)  # Entidad emisora del certificado
 
     def __str__(self):
-        return f"Firma Digital para Factura {self.factura.numero_factura}"
+        return f"Firma Digital emitida por {self.dEmitidoPor}"
 
 # Modelo de QR de Factura
 class QRFactura(models.Model):
